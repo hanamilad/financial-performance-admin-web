@@ -9,6 +9,7 @@ import {
   LayoutDashboardIcon,
   SettingsIcon,
   StoreIcon,
+  UploadIcon,
   UsersIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -24,6 +25,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: "لوحة التحكم", icon: LayoutDashboardIcon, href: "/dashboard" },
   { label: "العملاء", icon: Building2Icon, href: "/dashboard/clients" },
+  { label: "استيراد البيانات", icon: UploadIcon, href: "/dashboard/imports" },
   { label: "الفروع", icon: StoreIcon },
   { label: "التقارير", icon: FileTextIcon },
   { label: "المستخدمون", icon: UsersIcon },
