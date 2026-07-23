@@ -1,7 +1,14 @@
 import { api } from "@/lib/api";
 import type { Paginated } from "@/lib/clients";
 
-export type ImportStatus = "uploaded" | "validation_failed" | "validated" | "draft";
+export type ImportStatus =
+  | "uploaded"
+  | "validation_failed"
+  | "validated"
+  | "draft"
+  | "under_review"
+  | "approved"
+  | "published";
 
 export type ImportBatch = {
   id: number;
@@ -42,11 +49,26 @@ export type ImportBatchDetail = ImportBatch & {
   errors: ImportError[];
   sheets: ImportSheetSummary[];
   rows: ImportRow[];
+  submitted_at: string | null;
+  submitted_by_name: string | null;
+  approved_at: string | null;
+  approved_by_name: string | null;
+  published_at: string | null;
+  published_by_name: string | null;
+  review_note: string | null;
 };
 
-export async function listImports(page?: number): Promise<Paginated<ImportBatch>> {
+export type ImportListParams = {
+  page?: number;
+  status?: ImportStatus | "";
+};
+
+export async function listImports(params: ImportListParams = {}): Promise<Paginated<ImportBatch>> {
   const { data } = await api.get<Paginated<ImportBatch>>("/api/v1/admin/imports", {
-    params: { page: page || undefined },
+    params: {
+      page: params.page || undefined,
+      status: params.status || undefined,
+    },
   });
   return data;
 }
@@ -76,6 +98,30 @@ export async function uploadImport(payload: UploadImportPayload): Promise<Import
     { headers: { "Content-Type": undefined } },
   );
   return data.data;
+}
+
+async function transition(id: number, action: string, body?: Record<string, unknown>): Promise<ImportBatchDetail> {
+  const { data } = await api.post<{ data: ImportBatchDetail }>(
+    `/api/v1/admin/imports/${id}/${action}`,
+    body,
+  );
+  return data.data;
+}
+
+export function submitImport(id: number): Promise<ImportBatchDetail> {
+  return transition(id, "submit");
+}
+
+export function approveImport(id: number): Promise<ImportBatchDetail> {
+  return transition(id, "approve");
+}
+
+export function publishImport(id: number): Promise<ImportBatchDetail> {
+  return transition(id, "publish");
+}
+
+export function returnImportToDraft(id: number, reviewNote: string): Promise<ImportBatchDetail> {
+  return transition(id, "return-to-draft", { review_note: reviewNote });
 }
 
 export async function deleteImport(id: number): Promise<void> {

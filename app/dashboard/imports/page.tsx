@@ -5,18 +5,32 @@ import Link from "next/link";
 import { EyeIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { useDeleteImport, useImports } from "@/hooks/use-imports";
-import type { ImportBatch } from "@/lib/imports";
-import { ImportStatusBadge } from "@/components/imports/import-status-badge";
+import type { ImportBatch, ImportStatus } from "@/lib/imports";
+import { ImportStatusBadge, importStatusOptions } from "@/components/imports/import-status-badge";
 import { ImportUploadDialog } from "@/components/imports/import-upload-dialog";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type StatusFilter = "all" | ImportStatus;
+
+function isDeletable(status: ImportStatus): boolean {
+  return status === "draft" || status === "validation_failed";
+}
 
 export default function ImportsPage() {
   const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<StatusFilter>("all");
   const [uploadOpen, setUploadOpen] = useState(false);
-  const query = useImports(page);
+  const query = useImports({ page, status: status === "all" ? "" : status });
   const deleteImport = useDeleteImport();
 
   const batches = query.data?.data ?? [];
@@ -56,15 +70,17 @@ export default function ImportsPage() {
           <Button variant="ghost" size="icon-sm" aria-label="عرض" render={<Link href={`/dashboard/imports/${batch.id}`} />}>
             <EyeIcon />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="حذف"
-            disabled={deleteImport.isPending}
-            onClick={() => deleteImport.mutate(batch.id)}
-          >
-            <Trash2Icon />
-          </Button>
+          {isDeletable(batch.status) ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="حذف"
+              disabled={deleteImport.isPending}
+              onClick={() => deleteImport.mutate(batch.id)}
+            >
+              <Trash2Icon />
+            </Button>
+          ) : null}
         </div>
       ),
     },
@@ -81,6 +97,28 @@ export default function ImportsPage() {
           </Button>
         }
       />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Select
+          value={status}
+          onValueChange={(next) => {
+            setStatus(next as StatusFilter);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="h-9 w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">كل الحالات</SelectItem>
+            {importStatusOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <DataTable
         columns={columns}

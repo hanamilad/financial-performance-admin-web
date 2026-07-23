@@ -31,8 +31,6 @@ export default function ClientsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
 
-  // Debounce applies to the free-text search only; status filter changes apply
-  // immediately — no artificial delay on a bounded toggle.
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput);

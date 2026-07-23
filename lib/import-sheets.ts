@@ -27,3 +27,14 @@ export function formatCell(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   return String(value);
 }
+
+const dateTimeFormat = new Intl.DateTimeFormat("ar", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+export function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : dateTimeFormat.format(date);
+}

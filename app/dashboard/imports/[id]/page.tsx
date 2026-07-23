@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { ArrowRightIcon, Trash2Icon } from "lucide-react";
+import { useParams } from "next/navigation";
+import { ArrowRightIcon } from "lucide-react";
 
-import { useDeleteImport, useImport } from "@/hooks/use-imports";
+import { useImport } from "@/hooks/use-imports";
 import type { ImportBatchDetail, ImportError, ImportRow } from "@/lib/imports";
 import { formatCell, isNumericValue, sheetLabel } from "@/lib/import-sheets";
 import { ImportStatusBadge } from "@/components/imports/import-status-badge";
-import { Button } from "@/components/ui/button";
+import { ImportWorkflow } from "@/components/imports/import-workflow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 
@@ -134,10 +134,8 @@ function PreviewTable({ rows }: { rows: ImportRow[] }) {
 
 export default function ImportDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const id = Number(params.id);
   const query = useImport(id);
-  const deleteImport = useDeleteImport();
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
 
   if (query.isLoading) {
@@ -165,7 +163,7 @@ export default function ImportDetailPage() {
       </Link>
 
       <Card>
-        <CardHeader className="flex-row items-start justify-between gap-3">
+        <CardHeader>
           <div className="flex flex-col gap-2">
             <CardTitle className="text-lg">{batch.client_name}</CardTitle>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -181,20 +179,10 @@ export default function ImportDetailPage() {
               <span className="text-muted-foreground">أخطاء: {batch.error_count}</span>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={deleteImport.isPending}
-            onClick={() =>
-              deleteImport.mutate(batch.id, {
-                onSuccess: () => router.push("/dashboard/imports"),
-              })
-            }
-          >
-            <Trash2Icon />
-            حذف
-          </Button>
         </CardHeader>
+        <CardContent>
+          <ImportWorkflow batch={batch} />
+        </CardContent>
       </Card>
 
       {sheets.length === 0 ? (
