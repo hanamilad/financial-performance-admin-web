@@ -12,20 +12,8 @@ import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { BranchFormDialog } from "@/components/clients/branch-form-dialog";
 import { ClientUserFormDialog } from "@/components/clients/client-user-form-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
@@ -52,8 +40,73 @@ export default function ClientDetailPage() {
 
   const client = query.data;
 
+  const branchColumns: DataTableColumn<Branch>[] = [
+    { key: "name", header: "الاسم", cell: (branch) => <span className="font-medium">{branch.name}</span> },
+    {
+      key: "code",
+      header: "الرمز",
+      align: "center",
+      cell: (branch) => (
+        <span dir="ltr" className="font-mono text-xs">
+          {branch.code}
+        </span>
+      ),
+    },
+    { key: "city", header: "المدينة", cell: (branch) => branch.city ?? "—" },
+    { key: "status", header: "الحالة", align: "center", cell: (branch) => <StatusBadge status={branch.status} /> },
+    {
+      key: "actions",
+      header: "إجراءات",
+      align: "center",
+      cell: (branch) => (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setBranchDialog({ open: true, branch })}
+          aria-label="تعديل الفرع"
+        >
+          <PencilIcon />
+        </Button>
+      ),
+    },
+  ];
+
+  const userColumns: DataTableColumn<ClientUser>[] = [
+    { key: "name", header: "الاسم", cell: (user) => <span className="font-medium">{user.name}</span> },
+    {
+      key: "email",
+      header: "البريد الإلكتروني",
+      cell: (user) => (
+        <span dir="ltr" className="text-start">
+          {user.email}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "الحالة",
+      align: "center",
+      cell: (user) => <StatusBadge status={user.is_active ? "active" : "inactive"} />,
+    },
+    {
+      key: "actions",
+      header: "إجراءات",
+      align: "center",
+      cell: (user) => (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setUserDialog({ open: true, user })}
+          aria-label="تعديل المستخدم"
+        >
+          <PencilIcon />
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href="/dashboard/clients"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -89,47 +142,13 @@ export default function ClientDetailPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>الاسم</TableHead>
-                <TableHead>الرمز</TableHead>
-                <TableHead>المدينة</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead className="text-end">إجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {client.branches.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                    لا توجد فروع بعد.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                client.branches.map((branch) => (
-                  <TableRow key={branch.id}>
-                    <TableCell className="font-medium">{branch.name}</TableCell>
-                    <TableCell dir="ltr" className="text-start">{branch.code}</TableCell>
-                    <TableCell>{branch.city ?? "—"}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={branch.status} />
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setBranchDialog({ open: true, branch })}
-                        aria-label="تعديل الفرع"
-                      >
-                        <PencilIcon />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            bare
+            columns={branchColumns}
+            rows={client.branches}
+            rowKey={(branch) => branch.id}
+            emptyLabel="لا توجد فروع بعد."
+          />
         </CardContent>
       </Card>
 
@@ -142,45 +161,13 @@ export default function ClientDetailPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>الاسم</TableHead>
-                <TableHead>البريد الإلكتروني</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead className="text-end">إجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {client.users.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                    لا يوجد مستخدمون بعد.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                client.users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell dir="ltr" className="text-start">{user.email}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={user.is_active ? "active" : "inactive"} />
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setUserDialog({ open: true, user })}
-                        aria-label="تعديل المستخدم"
-                      >
-                        <PencilIcon />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            bare
+            columns={userColumns}
+            rows={client.users}
+            rowKey={(user) => user.id}
+            emptyLabel="لا يوجد مستخدمون بعد."
+          />
         </CardContent>
       </Card>
 

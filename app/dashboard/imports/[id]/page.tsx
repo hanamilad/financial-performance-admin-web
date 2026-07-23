@@ -1,36 +1,135 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRightIcon, Trash2Icon } from "lucide-react";
 
 import { useDeleteImport, useImport } from "@/hooks/use-imports";
+import type { ImportBatchDetail, ImportError, ImportRow } from "@/lib/imports";
+import { formatCell, isNumericValue, sheetLabel } from "@/lib/import-sheets";
 import { ImportStatusBadge } from "@/components/imports/import-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 
-const previewColumns: { key: string; label: string }[] = [
-  { key: "date", label: "التاريخ" },
-  { key: "gross_sales_ex_vat", label: "إجمالي المبيعات" },
-  { key: "discounts", label: "الخصومات" },
-  { key: "returns", label: "المرتجعات" },
-  { key: "net_sales_ex_vat", label: "صافي المبيعات" },
-  { key: "vat_amount", label: "الضريبة" },
-  { key: "order_count", label: "الطلبات" },
-  { key: "operating_status", label: "الحالة" },
-];
+function SheetTabs({
+  sheets,
+  active,
+  onSelect,
+}: {
+  sheets: ImportBatchDetail["sheets"];
+  active: string;
+  onSelect: (sheet: string) => void;
+}) {
+  return (
+    <div role="tablist" aria-label="أوراق الملف" className="flex flex-wrap gap-2">
+      {sheets.map((summary) => {
+        const selected = summary.sheet === active;
+        return (
+          <button
+            key={summary.sheet}
+            role="tab"
+            type="button"
+            aria-selected={selected}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onSelect(summary.sheet)}
+            className={[
+              "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              selected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-foreground hover:bg-muted",
+            ].join(" ")}
+          >
+            <span>{sheetLabel(summary.sheet)}</span>
+            {summary.error_count > 0 ? (
+              <span
+                className={[
+                  "rounded-full px-1.5 text-xs tabular-nums",
+                  selected ? "bg-primary-foreground/20" : "bg-destructive/10 text-destructive",
+                ].join(" ")}
+              >
+                {summary.error_count} خطأ
+              </span>
+            ) : (
+              <span
+                className={[
+                  "rounded-full px-1.5 text-xs tabular-nums",
+                  selected ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground",
+                ].join(" ")}
+              >
+                {summary.row_count} صف
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
-function cell(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—";
-  return String(value);
+function ErrorsTable({ errors }: { errors: ImportError[] }) {
+  const columns: DataTableColumn<ImportError>[] = [
+    { key: "row", header: "الصف", align: "center", cell: (error) => (error.row === 0 ? "—" : error.row) },
+    {
+      key: "column",
+      header: "العمود",
+      cell: (error) => (
+        <span dir="ltr" className="font-mono text-xs">
+          {error.column}
+        </span>
+      ),
+    },
+    { key: "value", header: "القيمة", align: "center", cell: (error) => formatCell(error.value) },
+    { key: "reason", header: "السبب", cell: (error) => error.reason },
+  ];
+
+  return (
+    <DataTable
+      bare
+      columns={columns}
+      rows={errors}
+      rowKey={(error) => `${error.row}-${error.column}-${error.reason}`}
+      emptyLabel="لا توجد أخطاء في هذه الورقة."
+    />
+  );
+}
+
+function PreviewTable({ rows }: { rows: ImportRow[] }) {
+  const columns = useMemo<DataTableColumn<ImportRow>[]>(() => {
+    const keys = Array.from(new Set(rows.flatMap((row) => Object.keys(row.data))));
+    return keys.map((key) => {
+      const numeric = isNumericValue(rows.find((row) => row.data[key] != null)?.data[key]);
+      return {
+        key,
+        header: (
+          <span dir="ltr" className="font-mono text-xs">
+            {key}
+          </span>
+        ),
+        align: numeric ? "center" : "start",
+        cell: (row: ImportRow) =>
+          numeric ? (
+            <span className="tabular-nums" dir="ltr">
+              {formatCell(row.data[key])}
+            </span>
+          ) : (
+            formatCell(row.data[key])
+          ),
+      } satisfies DataTableColumn<ImportRow>;
+    });
+  }, [rows]);
+
+  return (
+    <DataTable
+      bare
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => row.row_number}
+      emptyLabel="لا توجد صفوف محفوظة لهذه الورقة."
+    />
+  );
 }
 
 export default function ImportDetailPage() {
@@ -39,6 +138,7 @@ export default function ImportDetailPage() {
   const id = Number(params.id);
   const query = useImport(id);
   const deleteImport = useDeleteImport();
+  const [activeSheet, setActiveSheet] = useState<string | null>(null);
 
   if (query.isLoading) {
     return <p className="py-10 text-center text-muted-foreground">جارٍ التحميل...</p>;
@@ -49,10 +149,13 @@ export default function ImportDetailPage() {
   }
 
   const batch = query.data;
-  const rows = batch.rows ?? [];
+  const sheets = batch.sheets ?? [];
+  const active = activeSheet ?? sheets[0]?.sheet ?? null;
+  const sheetErrors = active ? batch.errors.filter((error) => error.sheet === active) : batch.errors;
+  const sheetRows = active ? batch.rows.filter((row) => row.sheet_name === active) : [];
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href="/dashboard/imports"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -94,67 +197,40 @@ export default function ImportDetailPage() {
         </CardHeader>
       </Card>
 
-      {batch.errors.length > 0 ? (
+      {sheets.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base text-destructive">أخطاء التحقق</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>الصف</TableHead>
-                    <TableHead>العمود</TableHead>
-                    <TableHead>القيمة</TableHead>
-                    <TableHead>السبب</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {batch.errors.map((error, index) => (
-                    <TableRow key={`${error.row}-${error.column}-${index}`}>
-                      <TableCell>{error.row === 0 ? "—" : error.row}</TableCell>
-                      <TableCell dir="ltr" className="text-start">{error.column}</TableCell>
-                      <TableCell>{cell(error.value)}</TableCell>
-                      <TableCell>{error.reason}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <ErrorsTable errors={batch.errors} />
           </CardContent>
         </Card>
-      ) : null}
-
-      {rows.length > 0 ? (
+      ) : (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">معاينة البيانات ({rows.length} صف)</CardTitle>
+          <CardHeader className="gap-4">
+            <CardTitle className="text-base">مراجعة الأوراق</CardTitle>
+            <SheetTabs sheets={sheets} active={active ?? ""} onSelect={setActiveSheet} />
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {previewColumns.map((column) => (
-                      <TableHead key={column.key}>{column.label}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.row_number}>
-                      {previewColumns.map((column) => (
-                        <TableCell key={column.key}>{cell(row.data[column.key])}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            {sheetErrors.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm font-medium text-destructive">
+                  {sheetErrors.length} خطأ في ورقة {sheetLabel(active ?? "")}
+                </p>
+                <ErrorsTable errors={sheetErrors} />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {sheetRows.length} صف في ورقة {sheetLabel(active ?? "")}
+                </p>
+                <PreviewTable rows={sheetRows} />
+              </div>
+            )}
           </CardContent>
         </Card>
-      ) : null}
+      )}
     </div>
   );
 }

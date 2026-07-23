@@ -19,6 +19,7 @@ export type ImportBatch = {
 };
 
 export type ImportError = {
+  sheet: string;
   row: number;
   column: string;
   value: unknown;
@@ -26,13 +27,21 @@ export type ImportError = {
 };
 
 export type ImportRow = {
+  sheet_name: string;
   row_number: number;
   data: Record<string, unknown>;
 };
 
+export type ImportSheetSummary = {
+  sheet: string;
+  row_count: number;
+  error_count: number;
+};
+
 export type ImportBatchDetail = ImportBatch & {
   errors: ImportError[];
-  rows?: ImportRow[];
+  sheets: ImportSheetSummary[];
+  rows: ImportRow[];
 };
 
 export async function listImports(page?: number): Promise<Paginated<ImportBatch>> {

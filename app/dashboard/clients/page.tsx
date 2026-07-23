@@ -8,8 +8,11 @@ import { useClients } from "@/hooks/use-clients";
 import type { Client, EntityStatus } from "@/lib/clients";
 import { StatusBadge } from "@/components/clients/status";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -17,14 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 type StatusFilter = "all" | EntityStatus;
 
@@ -36,6 +31,8 @@ export default function ClientsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
 
+  // Debounce applies to the free-text search only; status filter changes apply
+  // immediately — no artificial delay on a bounded toggle.
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput);
@@ -53,15 +50,52 @@ export default function ClientsPage() {
   const clients = query.data?.data ?? [];
   const meta = query.data?.meta;
 
-  return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">العملاء</h1>
-        <Button onClick={() => setCreateOpen(true)}>
-          <PlusIcon />
-          إضافة عميل
+  const columns: DataTableColumn<Client>[] = [
+    {
+      key: "name",
+      header: "الاسم",
+      cell: (client) => (
+        <Link href={`/dashboard/clients/${client.id}`} className="font-medium hover:underline">
+          {client.name}
+        </Link>
+      ),
+    },
+    {
+      key: "code",
+      header: "الرمز",
+      align: "center",
+      cell: (client) => (
+        <span dir="ltr" className="font-mono text-xs">
+          {client.code}
+        </span>
+      ),
+    },
+    { key: "status", header: "الحالة", align: "center", cell: (client) => <StatusBadge status={client.status} /> },
+    { key: "branches", header: "الفروع", align: "center", cell: (client) => <span className="tabular-nums">{client.branches_count ?? 0}</span> },
+    { key: "users", header: "المستخدمون", align: "center", cell: (client) => <span className="tabular-nums">{client.users_count ?? 0}</span> },
+    {
+      key: "actions",
+      header: "إجراءات",
+      align: "center",
+      cell: (client) => (
+        <Button variant="ghost" size="icon-sm" onClick={() => setEditing(client)} aria-label="تعديل العميل">
+          <PencilIcon />
         </Button>
-      </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="flex w-full flex-col gap-6">
+      <PageHeader
+        title="العملاء"
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <PlusIcon />
+            إضافة عميل
+          </Button>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <Input
@@ -88,93 +122,17 @@ export default function ClientsPage() {
         </Select>
       </div>
 
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>الاسم</TableHead>
-              <TableHead>الرمز</TableHead>
-              <TableHead>الحالة</TableHead>
-              <TableHead>الفروع</TableHead>
-              <TableHead>المستخدمون</TableHead>
-              <TableHead className="text-end">إجراءات</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {query.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                  جارٍ التحميل...
-                </TableCell>
-              </TableRow>
-            ) : query.isError ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-destructive">
-                  تعذّر تحميل العملاء. حاول مرة أخرى.
-                </TableCell>
-              </TableRow>
-            ) : clients.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                  لا يوجد عملاء مطابقون.
-                </TableCell>
-              </TableRow>
-            ) : (
-              clients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">
-                    <Link href={`/dashboard/clients/${client.id}`} className="hover:underline">
-                      {client.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell dir="ltr" className="text-start">{client.code}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={client.status} />
-                  </TableCell>
-                  <TableCell>{client.branches_count ?? 0}</TableCell>
-                  <TableCell>{client.users_count ?? 0}</TableCell>
-                  <TableCell className="text-end">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setEditing(client)}
-                      aria-label="تعديل العميل"
-                    >
-                      <PencilIcon />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={clients}
+        rowKey={(client) => client.id}
+        isLoading={query.isLoading}
+        isError={query.isError}
+        errorLabel="تعذّر تحميل العملاء. حاول مرة أخرى."
+        emptyLabel="لا يوجد عملاء مطابقون."
+      />
 
-      {meta && meta.last_page > 1 ? (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
-            صفحة {meta.current_page} من {meta.last_page}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={meta.current_page <= 1}
-              onClick={() => setPage((current) => current - 1)}
-            >
-              السابق
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={meta.current_page >= meta.last_page}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              التالي
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <Pagination meta={meta} onPageChange={setPage} />
 
       <ClientFormDialog open={createOpen} onOpenChange={setCreateOpen} />
       <ClientFormDialog
