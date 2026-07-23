@@ -23,7 +23,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "لوحة التحكم", icon: LayoutDashboardIcon, href: "/dashboard" },
-  { label: "العملاء", icon: Building2Icon },
+  { label: "العملاء", icon: Building2Icon, href: "/dashboard/clients" },
   { label: "الفروع", icon: StoreIcon },
   { label: "التقارير", icon: FileTextIcon },
   { label: "المستخدمون", icon: UsersIcon },
@@ -37,7 +37,8 @@ function SidebarNav() {
     <nav className="flex flex-col gap-1 p-3">
       {navItems.map(({ label, icon: Icon, href }) => {
         if (href) {
-          const active = pathname === href;
+          const active =
+            href === "/dashboard" ? pathname === href : pathname.startsWith(href);
           return (
             <Link
               key={label}
