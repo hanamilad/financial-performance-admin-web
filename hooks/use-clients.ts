@@ -32,6 +32,7 @@ export function useClient(id: number) {
   return useQuery({
     queryKey: [...clientsKey, "detail", id],
     queryFn: () => getClient(id),
+    enabled: id > 0,
   });
 }
 
