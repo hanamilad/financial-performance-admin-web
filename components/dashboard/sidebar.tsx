@@ -26,7 +26,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: "لوحة التحكم", icon: LayoutDashboardIcon, href: "/dashboard" },
   { label: "العملاء", icon: Building2Icon, href: "/dashboard/clients" },
-  { label: "استيراد البيانات", icon: UploadIcon, href: "/dashboard/imports" },
+  { label: "إدخال البيانات", icon: UploadIcon, href: "/dashboard/data-entry" },
   { label: "تحليل الربحية", icon: TrendingUpIcon, href: "/dashboard/reports/profitability" },
   { label: "الفروع", icon: StoreIcon },
   { label: "التقارير", icon: FileTextIcon },

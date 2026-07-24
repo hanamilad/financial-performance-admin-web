@@ -169,8 +169,8 @@ export default function ImportDetailPage() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span>الفرع: {batch.branch_name}</span>
               <span dir="ltr">الفترة: {batch.reporting_period}</span>
-              <span className="max-w-60 truncate" title={batch.original_filename}>
-                الملف: {batch.original_filename}
+              <span className="max-w-60 truncate" title={batch.original_filename ?? undefined}>
+                {batch.source === "manual" ? "إدخال يدوي" : `الملف: ${batch.original_filename ?? "—"}`}
               </span>
             </div>
             <div className="flex items-center gap-3 text-sm">

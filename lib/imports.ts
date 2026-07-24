@@ -10,14 +10,18 @@ export type ImportStatus =
   | "approved"
   | "published";
 
+export type ImportSource = "excel" | "manual";
+
 export type ImportBatch = {
   id: number;
   client_id: number;
   client_name?: string;
   branch_id: number;
   branch_name?: string;
+  branch_code?: string;
   reporting_period: string;
-  original_filename: string;
+  source: ImportSource;
+  original_filename: string | null;
   status: ImportStatus;
   row_count: number;
   error_count: number;
@@ -34,6 +38,7 @@ export type ImportError = {
 };
 
 export type ImportRow = {
+  id: number;
   sheet_name: string;
   row_number: number;
   data: Record<string, unknown>;

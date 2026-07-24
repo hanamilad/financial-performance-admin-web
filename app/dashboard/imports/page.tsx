@@ -50,13 +50,16 @@ export default function ImportsPage() {
       ),
     },
     {
-      key: "file",
-      header: "الملف",
-      cell: (batch) => (
-        <span className="block max-w-40 truncate" title={batch.original_filename}>
-          {batch.original_filename}
-        </span>
-      ),
+      key: "source",
+      header: "المصدر",
+      cell: (batch) =>
+        batch.source === "manual" ? (
+          <span className="text-muted-foreground">إدخال يدوي</span>
+        ) : (
+          <span className="block max-w-40 truncate" title={batch.original_filename ?? undefined}>
+            {batch.original_filename ?? "—"}
+          </span>
+        ),
     },
     { key: "status", header: "الحالة", align: "center", cell: (batch) => <ImportStatusBadge status={batch.status} /> },
     { key: "rows", header: "الصفوف", align: "center", cell: (batch) => <span className="tabular-nums">{batch.row_count}</span> },
@@ -67,7 +70,20 @@ export default function ImportsPage() {
       align: "center",
       cell: (batch) => (
         <div className="flex justify-center gap-1">
-          <Button variant="ghost" size="icon-sm" aria-label="عرض" render={<Link href={`/dashboard/imports/${batch.id}`} />}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="عرض"
+            render={
+              <Link
+                href={
+                  batch.source === "manual" && batch.status === "draft"
+                    ? `/dashboard/data-entry/manual/${batch.id}`
+                    : `/dashboard/imports/${batch.id}`
+                }
+              />
+            }
+          >
             <EyeIcon />
           </Button>
           {isDeletable(batch.status) ? (
