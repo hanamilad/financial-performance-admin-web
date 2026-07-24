@@ -4,7 +4,15 @@ export type TrendPoint = {
   cashflow: number;
 };
 
-export function TrendChart({ points }: { points: TrendPoint[] }) {
+export function TrendChart({
+  points,
+  areaLabel = "صافي المبيعات",
+  lineLabel = "صافي التدفق التشغيلي",
+}: {
+  points: TrendPoint[];
+  areaLabel?: string;
+  lineLabel?: string;
+}) {
   const count = points.length;
   const values = [0, ...points.map((point) => point.netSales), ...points.map((point) => point.cashflow)];
   const min = Math.min(...values);
@@ -26,11 +34,11 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block size-3 rounded-sm bg-primary/40" />
-          صافي المبيعات
+          {areaLabel}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-0.5 w-3 rounded-sm bg-primary" />
-          صافي التدفق التشغيلي
+          {lineLabel}
         </span>
       </div>
 

@@ -84,6 +84,89 @@ export async function getOverview(
   return data.data;
 }
 
+export type ReportWarning = { code: string; message: string };
+
+export type ProfitabilitySummary = {
+  net_sales: string;
+  cogs: string | null;
+  gross_profit: string | null;
+  total_operating_expenses: string | null;
+  other_income: string;
+  other_expenses: string;
+  net_profit: string | null;
+  platform_costs: string | null;
+};
+
+export type ProfitabilityMargins = {
+  gross_margin: string | null;
+  net_margin: string | null;
+  food_cost_ratio: string | null;
+  packaging_cost_ratio: string | null;
+  payroll_cost_ratio: string | null;
+  rent_cost_ratio: string | null;
+  utilities_cost_ratio: string | null;
+  marketing_cost_ratio: string | null;
+};
+
+export type ProfitabilityCostBreakdown = {
+  food_cost: string | null;
+  packaging_cost: string | null;
+  payroll_cost: string | null;
+  rent_cost: string | null;
+  utilities_cost: string | null;
+  marketing_cost: string | null;
+  platform_costs: string | null;
+  other_operating_expenses: string | null;
+  by_category: { category: string; amount: string; ratio: string | null }[];
+};
+
+export type ProfitabilityMonthlyPoint = {
+  period: string;
+  net_sales: string;
+  gross_profit: string | null;
+  net_profit: string | null;
+  gross_margin: string | null;
+  net_margin: string | null;
+};
+
+export type ProfitabilityBranchRow = {
+  branch_id: number;
+  branch_name: string | null;
+  net_sales: string;
+  gross_profit: string | null;
+  net_profit: string | null;
+  gross_margin: string | null;
+  net_margin: string | null;
+};
+
+export type Profitability = {
+  empty: boolean;
+  filters: { client_id: number; branch_id: number | null; period_from: string; period_to: string };
+  summary: ProfitabilitySummary | null;
+  margins: ProfitabilityMargins | null;
+  cost_breakdown: ProfitabilityCostBreakdown | null;
+  monthly_trend: ProfitabilityMonthlyPoint[];
+  branch_comparison: ProfitabilityBranchRow[] | null;
+  data_coverage: DataCoverage;
+  warnings: ReportWarning[];
+};
+
+export async function getProfitability(
+  params: OverviewParams,
+  signal?: AbortSignal,
+): Promise<Profitability> {
+  const { data } = await api.get<{ data: Profitability }>("/api/v1/admin/reports/profitability", {
+    signal,
+    params: {
+      client_id: params.clientId,
+      branch_id: params.branchId ?? undefined,
+      period_from: params.from,
+      period_to: params.to,
+    },
+  });
+  return data.data;
+}
+
 const channelLabels: Record<string, string> = {
   dine_in_sales: "مبيعات الصالة",
   pickup_sales: "مبيعات الاستلام",

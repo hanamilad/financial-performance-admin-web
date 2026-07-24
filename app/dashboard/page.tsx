@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-import { useClient, useClients } from "@/hooks/use-clients";
+import { useReportFilters } from "@/hooks/use-report-filters";
 import { useOverview } from "@/hooks/use-reports";
 import type { BranchComparisonRow, Overview } from "@/lib/reports";
 import { channelLabel, expenseCategoryLabel } from "@/lib/reports";
@@ -15,15 +13,6 @@ import { KpiCard } from "@/components/reports/kpi-card";
 import { TrendChart } from "@/components/reports/trend-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function yearStart(): string {
-  return `${new Date().getFullYear()}-01`;
-}
 
 function kpiCards(summary: NonNullable<Overview["summary"]>) {
   return [
@@ -157,40 +146,25 @@ function OverviewContent({ overview }: { overview: Overview }) {
 }
 
 export default function DashboardPage() {
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  const [branchId, setBranchId] = useState<number | null>(null);
-  const [from, setFrom] = useState(yearStart());
-  const [to, setTo] = useState(currentMonth());
-
-  const clientsQuery = useClients({ status: "active", page: 1 });
-  const clients = useMemo(() => clientsQuery.data?.data ?? [], [clientsQuery.data]);
-
-  const clientId = selectedClientId ?? clients[0]?.id ?? null;
-
-  const clientQuery = useClient(clientId ?? 0);
-  const branches = clientQuery.data?.branches ?? [];
-
-  const params = clientId ? { clientId, branchId, from, to } : null;
-  const overviewQuery = useOverview(params);
+  const filters = useReportFilters();
+  const overviewQuery = useOverview(filters.params);
+  const { clientId } = filters;
 
   return (
     <div className="flex w-full flex-col gap-6">
       <PageHeader title="لوحة الأداء" description="مؤشرات الأداء الأساسية من البيانات المنشورة" />
 
       <FilterBar
-        clients={clients}
-        clientId={clientId}
-        onClientChange={(next) => {
-          setSelectedClientId(next);
-          setBranchId(null);
-        }}
-        branches={branches}
-        branchId={branchId}
-        onBranchChange={setBranchId}
-        from={from}
-        to={to}
-        onFromChange={setFrom}
-        onToChange={setTo}
+        clients={filters.clients}
+        clientId={filters.clientId}
+        onClientChange={filters.setClientId}
+        branches={filters.branches}
+        branchId={filters.branchId}
+        onBranchChange={filters.setBranchId}
+        from={filters.from}
+        to={filters.to}
+        onFromChange={filters.setFrom}
+        onToChange={filters.setTo}
         onRefresh={() => overviewQuery.refetch()}
         isFetching={overviewQuery.isFetching}
       />
